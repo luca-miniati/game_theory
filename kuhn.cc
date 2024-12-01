@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <random>
 using namespace std;
 
 /*
@@ -48,52 +49,52 @@ Information set   - Containins an active player, and all the information availab
 */
 
 // number of iterations to run CFR
-const int T;
-
-struct GameState {
-    GameState(int c1, int c2) : c1(c1), c2(c2) {}
-    int c1, c2;
-};
-
-struct InfoSet {
-    InfoSet(int player, int card, int history) : player(player), card(card), history(history) {}
-    int player;
-    int card;
-    string history;
-};
+const int T = 10000;
+// can only check or bet
+const int NUM_ACTIONS = 2;
+// have 3 cards
+const int NUM_CARDS = 3;
 
 class Node {
 private:
-    InfoSet info_set;
-    vector<GameState> game_state;
+    string history;
 public:
-    Node(InfoSet info_set, GameState game_state) : info_set(info_set), game_state(game_state) {}
-
+    Node() {}
+    Node(string history) : history(history) {}
     bool is_terminal() {
-        string h = info_set.history;
         // if there are 2 moves, h terminal <=> (h = *c) or (h = b*)
-        if (h.size() == 2) return h.back() == 'c' || h.front() == 'b';
+        if (history.size() == 2) return history.back() == 'c' || history.front() == 'b';
         // otherwise, h terminal <=> h has 3 moves
-        return h.size() == 3;
+        return history.size() == 3;
     }
 
-    double utility(int player) {
-        string h = info_set.history;
-
+    double get_utility() {
+        return 0;
     }
 };
 
-double cfr(Node v, player p, int t, int s1, int s2) {
-    if (v.is_terminal())
-        return v.utility(p);
+double cfr(int cards[NUM_CARDS], string history, int s1, int s2) {
+    return 0;
+}
 
+void shuffle(int (&cards)[NUM_CARDS]) {
+    random_device rd;
+    mt19937 rng(rd());
+    uniform_int_distribution<int> dist(0, NUM_CARDS - 1);
+    for (int c1 = NUM_CARDS - 1; c1 > 0; --c1) {
+        int c2 = dist(rng);
+    }
+}
+
+void train() {
+    int cards[3] = {0, 1, 2};
+    double utility = 0;
+    for (int i = 0; i < T; ++i) {
+        shuffle(cards);
+        utility += cfr(cards, "", 1, 1);
+    }
 }
 
 int main() {
-    for (int t = 0; t < T; ++t) {
-        // run cfr for P1
-        cfr({}, 0, t, 1, 1);
-        // run cfr for P2
-        cfr({}, 1, t, 1, 1);
-    }
+    train();
 }
