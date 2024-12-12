@@ -64,22 +64,21 @@ const vector<string> ACTIONS = {"c", "b"};
 
 class Node {
 private:
-    int c1;
-    int c2;
     double total_reach_probability;
     double strategy[NUM_ACTIONS];
     double strategy_sum[NUM_ACTIONS];
     double regret_sum[NUM_ACTIONS];
 public:
     int player_to_move;
+    int c1;
+    int c2;
     string history;
-    vector<Node> children;
+    vector<Node*> children;
     double reach_probability;
 
-    Node(int player_to_move, int c1, int c2, string history,
-        vector<Node> children, double reach_probability)
+    Node(int player_to_move, int c1, int c2, string history, double reach_probability)
     : player_to_move(player_to_move), c1(c1), c2(c2), history(history),
-    children(children), reach_probability(reach_probability) {
+    reach_probability(reach_probability) {
         // init with uniform strategy
         for (int a = 0; a < NUM_ACTIONS; ++a)
             this->strategy[a] = 1.0 / NUM_ACTIONS;
@@ -98,8 +97,8 @@ public:
         if (!this->history.length()) {
             double EV = 0;
             int n = this->children.size();
-            for (Node v : this->children)
-                EV += v.cfr(1, 1, 1.0 / n);
+            for (Node* v : this->children)
+                EV += v->cfr(1, 1, 1.0 / n);
             return EV / n;
         }
 
@@ -114,9 +113,9 @@ public:
         // define counterfactual utility array
         double cf_utility[NUM_ACTIONS];
         for (int a = 0; a < NUM_ACTIONS; ++a) {
-            Node v = this->children[a];
-            if (player_to_move == 1) cf_utility[a] = v.cfr(p1 * this->strategy[a], p2, pc);
-            else cf_utility[a] = v.cfr(p1, p2 * this->strategy[a], pc);
+            Node* v = this->children[a];
+            if (player_to_move == 1) cf_utility[a] = v->cfr(p1 * this->strategy[a], p2, pc);
+            else cf_utility[a] = v->cfr(p1, p2 * this->strategy[a], pc);
         }
 
         // compute utility
@@ -172,17 +171,46 @@ public:
     }
 };
 
-vector<Node> build_nodes(string curr, map<string, vector<string>>& states) {
-}
+Node* build_tree() {
+    deque<Node*> Q;
+    Node* root = new Node(1, -1, -1, "", 1);
+    for (int c1 = 1; c1 <= NUM_CARDS; ++c1) {
+        for (int c2 = 1; c2 <= NUM_CARDS; ++c2) {
+            if (c1 == c2) continue;
 
-Node build_tree() {
+            Node* u = new Node(1, c1, c2, "rr", 1);
+            Q.push_back(u);
+            root->children.push_back(u);
+        }
+    }
+
+    while (Q.size()) {
+        Node* curr = Q.front();
+        Q.pop_front();
+
+        if (curr->is_terminal()) {
+            continue;
+        }
+
+        Node* bet = new Node((curr->player_to_move == 1) ? 2 : 1,
+            curr->c1, curr->c2, curr->history + "b", 1);
+        Q.push_back(bet);
+        curr->children.push_back(bet);
+        Node* check = new Node((curr->player_to_move == 1) ? 2 : 1,
+            curr->c1, curr->c2, curr->history + "c", 1);
+        Q.push_back(check);
+        curr->children.push_back(check);
+    }
+
+    return root;
 }
 
 void train() {
-    Node tree = build_tree();
+    Node* tree = build_tree();
+
     double EV = 0;
     for (int i = 0; i < T; ++i)
-        EV += tree.cfr(-1, -1, -1);
+        EV += tree->cfr(-1, -1, -1);
     cout << "Expected game value: " << EV / T << '\n';
 }
 
