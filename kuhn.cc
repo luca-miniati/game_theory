@@ -224,7 +224,7 @@ void train() {
 
     double EV = 0;
     for (int i = 0; i < T; ++i) {
-        EV += tree->cfr(-1, -1, -1);
+        EV += tree->cfr(1, 1, 1);
         update_tree(tree);
     }
     cout << "Expected game value: " << EV / T << '\n';
