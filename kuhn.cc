@@ -52,7 +52,7 @@ There are 12 possible information sets:
 */
 
 // number of iterations to run CFR
-const int T = 10000;
+const int T = 100000;
 // can only check or bet
 const int NUM_ACTIONS = 2;
 // have 3 cards
@@ -107,15 +107,19 @@ public:
             return this->EV();
 
         // otherwise, we're still playing
-        if (player_to_move == 1) this->reach_probability += p1;
-        else this->reach_probability += p2;
+        if (player_to_move == 1)
+            this->reach_probability += p1;
+        else
+            this->reach_probability += p2;
 
         // define counterfactual utility array
         double cf_utility[NUM_ACTIONS];
         for (int a = 0; a < NUM_ACTIONS; ++a) {
             Node* v = this->children[a];
-            if (player_to_move == 1) cf_utility[a] = v->cfr(p1 * this->strategy[a], p2, pc);
-            else cf_utility[a] = v->cfr(p1, p2 * this->strategy[a], pc);
+            if (player_to_move == 1)
+                cf_utility[a] = -1 * v->cfr(p1 * this->strategy[a], p2, pc);
+            else
+                cf_utility[a] = -1 * v->cfr(p1, p2 * this->strategy[a], pc);
         }
 
         // compute utility
@@ -125,19 +129,21 @@ public:
 
         // update regret sum
         for (int a = 0; a < NUM_ACTIONS; ++a) {
-            if (player_to_move == 1) this->regret_sum[a] += p2 * pc * (cf_utility[a] - utility);
-            else this->regret_sum[a] += p1 * pc * (cf_utility[a] - utility);
+            if (player_to_move == 1)
+                this->regret_sum[a] += p2 * pc * (cf_utility[a] - utility);
+            else
+                this->regret_sum[a] += p1 * pc * (cf_utility[a] - utility);
         }
 
         return utility;
     }
 
     void match_regrets() {
-        double norm = 0;
-        for (int a = 0; a < NUM_ACTIONS; ++a) {
-            this->strategy[a] = (this->regret_sum[a] > 0) ? this->regret_sum[a] : 0;
-            norm += this->strategy[a];
-        }
+        for (int a = 0; a < NUM_ACTIONS; ++a)
+            this->strategy[a] = std::max(0.0, this->regret_sum[a]);
+
+        double norm = std::accumulate(this->strategy, this->strategy + NUM_ACTIONS, 0.0);
+
         for (int a = 0; a < NUM_ACTIONS; ++a) {
             if (norm > 0)
                 this->strategy[a] /= norm;
@@ -152,7 +158,7 @@ public:
             throw std::runtime_error("you tried to call Node.EV() on a non-terminal node.");
 
         int this_card = (this->player_to_move == 1) ? c1 : c2;
-        int other_card = (this->player_to_move == 1) ? c1 : c2;
+        int other_card = (this->player_to_move == 1) ? c2 : c1;
 
         // we bet and they folded
         if (this->history == "rrbc" || this->history == "rrcbc")
@@ -170,6 +176,14 @@ public:
         return TERMINAL_STATES.count(this->history);
     }
 };
+
+void update_tree(Node* u) {
+    if (u->history.length() > 2 && !u->is_terminal()) {
+        u->update_strategy();
+        for (Node* v : u->children)
+            update_tree(v);
+    }
+}
 
 Node* build_tree() {
     deque<Node*> Q;
@@ -209,8 +223,10 @@ void train() {
     Node* tree = build_tree();
 
     double EV = 0;
-    for (int i = 0; i < T; ++i)
+    for (int i = 0; i < T; ++i) {
         EV += tree->cfr(-1, -1, -1);
+        update_tree(tree);
+    }
     cout << "Expected game value: " << EV / T << '\n';
 }
 
