@@ -445,7 +445,7 @@ private:
         string turn = p1;
         // while hand is running
         while (!TERMINAL_HISTORIES.count(h)) {
-            if (turn == "player") {
+            if (turn == "Player") {
                 // get player's move
                 h += get_player_action();
             } else {
@@ -459,7 +459,7 @@ private:
                 // if it did, do this
                 handle_terminal_state(h, node);
 
-            turn = (turn == "player") ? "bot" : "player";
+            turn = (turn == "Player") ? "Bot" : "Player";
         }
     }
 public:
@@ -475,7 +475,7 @@ public:
         bool is_game_over = false;
         while (!is_game_over) {
             ranges::shuffle(cards, rng);
-            bool oop = (this->p1 == "player");
+            bool oop = (this->p1 == "Player");
             this->player_card = cards[oop ? 0 : 1];
             this->player_card_string = to_string(cards[oop ? 0 : 1]);
             this->bot_card = cards[oop ? 1 : 0];
