@@ -142,9 +142,9 @@ public:
             norm += this->strategy_sum[a];
         for (int a = 0; a < NUM_ACTIONS; ++a) {
             if (norm > 0)
-                average_strategy[a] = this->strategy_sum[a] / norm;
+            average_strategy[a] = this->strategy_sum[a] / norm;
             else
-                average_strategy[a] = 1.0 / NUM_ACTIONS;
+            average_strategy[a] = 1.0 / NUM_ACTIONS;
         }
         return average_strategy;
     }
@@ -245,9 +245,9 @@ private:
             int card = info_set[0] - '0';
             string h = info_set.substr(1);
             if (info_set.length() % 2)
-                strategy1[card].push_back({h, strategy});
+            strategy1[card].push_back({h, strategy});
             else
-                strategy2[card].push_back({h, strategy});
+            strategy2[card].push_back({h, strategy});
         }
         cout << "Player 1 Strategy:" << endl;
         for (int c = 1; c <= 3; ++c) {
@@ -310,7 +310,7 @@ public:
 };
 
 class Game {
-private:
+    private:
     unordered_map<string, Node*> solution;
     string p1, p2;
     int player_card, bot_card, player_stack = 10, bot_stack = 10;
@@ -319,34 +319,36 @@ private:
     map<int, string> num_to_card = {{1, "J"}, {2, "Q"}, {3, "K"}};
 
     void setup() {
-        cout << "Enter difficulty level:\n(1/2/3) ";
+        cout << "*  Enter difficulty level:" << endl << "   (1/2/3) ";
         int difficulty; cin >> difficulty;
         while (difficulty != 1 && difficulty != 2 && difficulty != 3) {
-            cout << "(1/2/3) ";
+            cout << "   (1/2/3) ";
             cin >> difficulty;
         }
 
         cout << endl;
-        cout << "Training the algorithm..." << endl;
+        cout << "-> Training the algorithm..." << endl;
         Solver solver;
+        clock_t start_time = clock();
         switch (difficulty) {
             case 1:
-                solver.train(1);
-                break;
+            solver.train(1);
+            break;
             case 2:
-                solver.train(100);
-                break;
+            solver.train(100);
+            break;
             case 3:
-                solver.train(500000);
-                break;
+            solver.train(500000);
+            break;
         }
-        cout << "Done!" << endl << endl;
+        cout << "-> Done! Trained for " << fixed << setprecision(4) <<
+        static_cast<double>(clock() - start_time) / CLOCKS_PER_SEC << " seconds" << endl << endl;
 
         this->solution = solver.get_solution();
-        cout << "Choose player:\n(1/2) ";
+        cout << "*  Choose player: (player 1 goes first, player 2 goes second)" << endl << "   (1/2) ";
         int p; cin >> p;
         while (p != 1 && p != 2) {
-            cout << "(1/2) ";
+            cout << "   (1/2) ";
             cin >> p;
         }
         this->p1 = (p == 1) ? "Player" : "Bot";
@@ -387,11 +389,48 @@ private:
 
         // display change in stacks
         if (res > 0)
-            cout << "+  Player wins " << to_string(abs(res)) <<
-            " chip" << "s "[abs(res) == 1] << endl << endl;
+        cout << "+  Player wins " << to_string(abs(res)) <<
+        " chip" << "s "[abs(res) == 1] << endl << endl;
         else
-            cout << "-  Player loses " << to_string(abs(res)) <<
-            " chip" << "s "[abs(res) == 1] << endl << endl;
+        cout << "-  Player loses " << to_string(abs(res)) <<
+        " chip" << "s "[abs(res) == 1] << endl << endl;
+    }
+
+    void display_welcome_message() {
+        cout <<
+        "                                                        ****___*****" << endl <<
+        "                                                      **____***____**__***" << endl <<
+        "                                                    **___***____*******___**" << endl <<
+        "                                                  *********************************" << endl <<
+        "                                               *****------------------------------*" << endl <<
+        "                                            ****__**------------------------------*" << endl <<
+        "                                          ***_**__*_------------------------------*" << endl <<
+        "                                       ***_**_***_*_------------------------------*" << endl <<
+        "                                        **__*_*_****------------------------------*" << endl <<
+        "                                         **_*_******------------------------------*" << endl <<
+        "                                                                                   .-'''-.                                        " << endl <<
+        "                                                                                  '   _    \\                                      " << endl <<
+        "     .                   .            _..._             _________   _...._      /   /` '.   \\    .          __.....__             " << endl <<
+        "   .'|                 .'|          .'     '.           \\        |.'      '-.  .   |     \\  '  .'|      .-''         '.           " << endl <<
+        " .'  |                <  |         .   .-.   .           \\        .'```'.    '.|   '      |  .'  |     /     .-''\"'-.  `..-,.--.  " << endl <<
+        "<    |                 | |         |  '   '  |            \\      |       \\     \\    \\     / <    |    /     /________\\   |  .-. | " << endl <<
+        " |   | ____     _    _ | | .'''-.  |  |   |  |             |     |        |    |`.   ` ..' / |   | ___|                  | |  | | " << endl <<
+        " |   | \\ .'    | '  / || |/.'''. \\ |  |   |  |             |      \\      /    .    '-...-'`  |   | \\ .\\    .-------------| |  | | " << endl <<
+        " |   |/  .    .' | .' ||  /    | | |  |   |  |             |     |\\`'-.-'   .'               |   |/  . \\    '-.____...---| |  '-  " << endl <<
+        " |    /\\  \\   /  | /  || |     | | |  |   |  |             |     | '-....-'`                 |    /\\  \\ `.             .'| |      " << endl <<
+        " |   |  \\  \\ |   `'.  || |     | | |  |   |  |            .'     '.                          |   |  \\  \\  `''-...... -'  | |      " << endl <<
+        " '    \\  \\  \'   .'|  '| '.    | '.|  |   |  |          '-----------'                        '    \\  \\  \\                |_|      " << endl <<
+        "'------'  '---`-'  `--''---'   '---'--'   '--'                                              '------'  '---'                       " << endl <<
+        "                                               *****------------------------------*" << endl <<
+        "                                                ***_------------------------------*" << endl <<
+        "                                                 **_------------------------------*" << endl <<
+        "                                                  **------------------------------*" << endl <<
+        "                                                  **------------------------------*" << endl <<
+        "                                                   **__****************************" << endl <<
+        "                                                   ************" << endl <<
+        "                                                      ******" << endl;
+
+        cout << "Welcome to Kuhn Poker!" << endl << endl;
     }
 
     void handle_terminal_state(string h, Node* node) {
@@ -414,14 +453,14 @@ private:
         cin.ignore();
         char temp = 'x';
         while (temp != '\n')
-            cin.get(temp);
+        cin.get(temp);
     }
 
     string get_player_action() {
-        cout << "Check or bet:\n(c/b) ";
+        cout << "*  Check or bet:" << endl << "(c/b) ";
         string c; cin >> c;
         while (c != "c" && c != "b") {
-            cout << "(c/b) ";
+            cout << "   (c/b) ";
             cin >> c;
         }
         cout << "-> Player plays " << ((c == "c") ? "check" : "bet") << endl << endl;
@@ -456,15 +495,15 @@ private:
 
             // check if that move ended the game
             if (node->is_terminal())
-                // if it did, do this
+            // if it did, do this
                 handle_terminal_state(h, node);
 
             turn = (turn == "Player") ? "Bot" : "Player";
         }
     }
-public:
+    public:
     void play() {
-        cout << "Welcome to Kuhn Poker!" << endl;
+        display_welcome_message();
         this->setup();
 
         // make rng
@@ -483,7 +522,7 @@ public:
 
             this->play_hand();
             if (player_stack <= 0 || bot_stack <= 0)
-                is_game_over = true;
+            is_game_over = true;
         }
 
         cout << "Game over!" << endl;
