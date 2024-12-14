@@ -310,7 +310,7 @@ public:
 };
 
 class Game {
-    private:
+private:
     unordered_map<string, Node*> solution;
     string p1, p2;
     int player_card, bot_card, player_stack = 10, bot_stack = 10;
@@ -501,7 +501,7 @@ class Game {
             turn = (turn == "Player") ? "Bot" : "Player";
         }
     }
-    public:
+public:
     void play() {
         display_welcome_message();
         this->setup();
