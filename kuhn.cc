@@ -1,12 +1,15 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iomanip>
+#include <ios>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 #include <unordered_map>
 #include <map>
 #include <unordered_set>
+#include <set>
 #include <random>
 #include <functional>
 #include <ctime>
@@ -278,7 +281,9 @@ public:
 
         clock_t start_time = clock();
         double util = 0;
-        for (int i = 0; i < T; ++i) {
+        // we do 6 permutations to guarantee that we cover all possible states
+        // at least once
+        for (int i = 0; i < T + 6; ++i) {
             util += cfr(cards, "", 1, 1);
             next_permutation(cards.begin(), cards.end());
         }
@@ -304,42 +309,179 @@ public:
     }
 };
 
+class Game {
+private:
+    unordered_map<string, Node*> solution;
+    string p1;
+    int player_card, bot_card, player_stack = 10, bot_stack = 10;
+    string player_card_string, bot_card_string;
+    vector<int> cards = {1, 2, 3};
+    map<int, string> num_to_card = {{1, "J"}, {2, "Q"}, {3, "K"}};
+
+    void setup() {
+        cout << "Enter difficulty level:\n(1/2/3) ";
+        int difficulty; cin >> difficulty;
+        while (difficulty != 1 && difficulty != 2 && difficulty != 3) {
+            cout << "(1/2/3) ";
+            cin >> difficulty;
+        }
+
+        cout << endl;
+        cout << "Training the algorithm..." << endl;
+        Solver solver;
+        switch (difficulty) {
+            case 1:
+                solver.train(1);
+                break;
+            case 2:
+                solver.train(100);
+                break;
+            case 3:
+                solver.train(500000);
+                break;
+        }
+        cout << "Done!" << endl << endl;
+
+        this->solution = solver.get_solution();
+        cout << "Choose player:\n(1/2) ";
+        int p; cin >> p;
+        while (p != 1 && p != 2) {
+            cout << "(1/2) ";
+            cin >> p;
+        }
+        this->p1 = (p == 1) ? "player" : "bot";
+        cout << endl;
+    }
+
+    void display() {
+        system("clear");
+        cout <<
+        "Player" << "\n------\n" <<
+        "Card: " << this->num_to_card[player_card] << ", " <<
+        "Stack: " << to_string(player_stack) << endl << endl <<
+        "Bot" << "\n---\n" <<
+        "Card: ?, Stack: " << to_string(bot_stack) << endl << endl;
+    }
+
+    void handle_terminal_state(Node* node, bool player_closed_action) {
+        // showdown
+        cout << "Bot shows " << this->num_to_card[this->bot_card];
+        // get result of showdown
+        int res = (int) node->get_payoff(this->cards);
+        // what happens now depends on who closed action
+        if (player_closed_action) {
+            if (res > 0)
+                cout << ", player loses " << to_string(abs(res)) <<
+                " chip" << "s "[abs(res) == 1] << endl << endl;
+            else
+                cout << ", player wins " << to_string(abs(res)) <<
+                " chip" << "s "[abs(res) == 1] << endl << endl;
+            player_stack -= res;
+            bot_stack += res;
+        } else {
+            if (res > 0)
+                cout << ", player wins " << to_string(abs(res)) <<
+                " chip" << "s "[abs(res) == 1] << endl << endl;
+            else
+                cout << ", player loses " << to_string(abs(res)) <<
+                " chip" << "s "[abs(res) == 1] << endl << endl;
+            player_stack += res;
+            bot_stack -= res;
+        }
+        cout << "(Enter) to continue" << endl;
+        cin.ignore();
+        char temp = 'x';
+        while (temp != '\n')
+            cin.get(temp);
+    }
+
+    string get_player_action() {
+        cout << "Check or bet:\n(c/b) ";
+        string c; cin >> c;
+        while (c != "c" && c != "b") {
+            cout << "(c/b) ";
+            cin >> c;
+        }
+        cout << "Player plays " << ((c == "c") ? "check" : "bet") << endl;
+        return c;
+    }
+
+    string get_bot_action(string h) {
+        // get node corresponding to this history and the bot's card
+        Node* node = this->solution[this->bot_card_string + h];
+        // get the optimal strategy
+        vector<double> strategy = node->get_average_strategy();
+        // pick the move
+        double r = ((double) rand()) / ((double) RAND_MAX);
+        cout << "Bot plays " << ((r <= strategy[0]) ? "check" : "bet") << endl << endl;
+        return (r <= strategy[0]) ? "c" : "b";
+    }
+
+    void play_hand() {
+        this->display();
+        string h;
+        // while hand is running
+        while (!TERMINAL_HISTORIES.count(h)) {
+            if (p1 == "player") {
+                // get player's move
+                h += get_player_action();
+
+                Node* node = this->solution[this->player_card_string + h];
+
+                // check if that move ended the game
+                if (node->is_terminal()) {
+                    // if it did, do this
+                    handle_terminal_state(node, true);
+                } else {
+                    // otherwise, it's the bot's turn
+                    h += get_bot_action(h);
+                    node = this->solution[this->bot_card_string + h];
+                    if (node->is_terminal())
+                        handle_terminal_state(node, false);
+                }
+            } else {
+                h += get_bot_action(h);
+
+                Node* node = this->solution[this->bot_card_string + h];
+                if (node->is_terminal())
+                    handle_terminal_state(node, false);
+                else {
+                    h += get_player_action();
+                    node = this->solution[this->player_card_string + h];
+                    if (node->is_terminal())
+                        handle_terminal_state(node, false);
+                }
+            }
+        }
+    }
+public:
+    void play() {
+        cout << "Welcome to Kuhn Poker!" << endl;
+        this->setup();
+
+        // make rng
+        random_device rd = random_device();
+        default_random_engine rng = default_random_engine(rd());
+
+        // game loop
+        bool is_game_over = false;
+        while (!is_game_over) {
+            ranges::shuffle(cards, rng);
+            this->player_card = cards[0];
+            this->player_card_string = to_string(cards[0]);
+            this->bot_card = cards[1];
+            this->bot_card_string = to_string(cards[1]);
+
+            this->play_hand();
+            if (player_stack <= 0 || bot_stack <= 0)
+                is_game_over = true;
+        }
+
+        cout << "Game over!" << endl;
+    }
+};
+
 int main() {
-    cout << "Welcome to Kuhn Poker!" << endl;
-    cout << "Enter difficulty level:\n(1/2/3) ";
-    int difficulty; cin >> difficulty;
-    while (difficulty != 1 && difficulty != 2 && difficulty != 3) {
-        cout << "(1/2/3) ";
-        cin >> difficulty;
-    }
-
-    cout << endl;
-    cout << "Training the algorithm..." << endl;
-    Solver solver;
-    switch (difficulty) {
-        case 1:
-            solver.train(1);
-            break;
-        case 2:
-            solver.train(100);
-            break;
-        case 3:
-            solver.train(500000);
-            break;
-    }
-    cout << "Done!" << endl << endl;
-
-    unordered_map<string, Node*> solution = solver.get_solution();
-    cout << "Choose player:\n(1/2) ";
-    int p; cin >> p;
-    while (p != 1 && p != 2) {
-        cout << "(1/2) ";
-        cin >> p;
-    }
-
-    cout << endl;
-    bool is_game_over = false;
-    while (!is_game_over) {
-
-    }
+    Game game;
+    game.play();
 }
