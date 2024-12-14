@@ -83,7 +83,7 @@ public:
     }
 
     // Returns payoff for terminal state
-    double get_payoff(vector<int>& cards) {
+    double get_utility(vector<int>& cards) {
         if (!this->is_terminal())
             throw runtime_error("called get_payoff on non-terminal node.");
 
@@ -171,7 +171,7 @@ private:
 
         // base case: return payoff for terminal state
         if (node->is_terminal())
-            return node->get_payoff(cards);
+            return node->get_utility(cards);
 
         // compute reach probability
         double reach_p = (player_idx == 0) ? p2 : p1;
@@ -212,7 +212,7 @@ private:
 
         // base case: return payoff for terminal state
         if (node->is_terminal())
-            return node->get_payoff(cards);
+            return node->get_utility(cards);
 
         vector<double> strategy = node->get_average_strategy();
         // utility of this node (the eventual return value of the cfr)
@@ -312,7 +312,7 @@ public:
 class Game {
 private:
     unordered_map<string, Node*> solution;
-    string p1;
+    string p1, p2;
     int player_card, bot_card, player_stack = 10, bot_stack = 10;
     string player_card_string, bot_card_string;
     vector<int> cards = {1, 2, 3};
@@ -349,45 +349,67 @@ private:
             cout << "(1/2) ";
             cin >> p;
         }
-        this->p1 = (p == 1) ? "player" : "bot";
+        this->p1 = (p == 1) ? "Player" : "Bot";
+        this->p2 = (p == 1) ? "Bot" : "Player";
         cout << endl;
     }
 
     void display() {
         system("clear");
         cout <<
-        "Player" << "\n------\n" <<
-        "Card: " << this->num_to_card[player_card] << ", " <<
-        "Stack: " << to_string(player_stack) << endl << endl <<
-        "Bot" << "\n---\n" <<
-        "Card: ?, Stack: " << to_string(bot_stack) << endl << endl;
+        "+---------------------------------+" << endl <<
+        "|            +-------+            |" << endl <<
+        "|            |  Bot  |            |" << endl <<
+        "|            +-------+            |" << endl <<
+        "|           +---+                 |" << endl <<
+        "|   Card:   | ? |     Stack: " << setw(2) << to_string(bot_stack) << "   |" << endl <<
+        "|           +---+                 |" << endl <<
+        "|                                 |" << endl <<
+        "|           +---+                 |" << endl <<
+        "|   Card:   | " << this->num_to_card[player_card] << " |     Stack: " << setw(2) << to_string(player_stack) << "   |" << endl <<
+        "|           +---+                 |" << endl <<
+        "|           +----------+          |" << endl <<
+        "|           |  Player  |          |" << endl <<
+        "|           +----------+          |" << endl <<
+        "+---------------------------------+" << endl << endl;
     }
 
-    void handle_terminal_state(Node* node, bool player_closed_action) {
-        // showdown
-        cout << "Bot shows " << this->num_to_card[this->bot_card];
-        // get result of showdown
-        int res = (int) node->get_payoff(this->cards);
-        // what happens now depends on who closed action
-        if (player_closed_action) {
-            if (res > 0)
-                cout << ", player loses " << to_string(abs(res)) <<
-                " chip" << "s "[abs(res) == 1] << endl << endl;
-            else
-                cout << ", player wins " << to_string(abs(res)) <<
-                " chip" << "s "[abs(res) == 1] << endl << endl;
-            player_stack -= res;
-            bot_stack += res;
+    void display_hand_result(string h, int res) {
+        if (h.back() == 'c' && h != "cc") {
+            // 0 if p1 folded, 1 if p2 folded
+            int folded = (h.length() + 1) % 2;
+            cout << "!  " << ((folded) ? this->p2 : this->p1) << " folds" << endl;
         } else {
-            if (res > 0)
-                cout << ", player wins " << to_string(abs(res)) <<
-                " chip" << "s "[abs(res) == 1] << endl << endl;
-            else
-                cout << ", player loses " << to_string(abs(res)) <<
-                " chip" << "s "[abs(res) == 1] << endl << endl;
-            player_stack += res;
-            bot_stack -= res;
+            // showdown
+            cout << "!  Bot shows " << this->num_to_card[this->bot_card];
+            cout << ", Player shows " << this->num_to_card[this->player_card] << endl;
         }
+
+        // display change in stacks
+        if (res > 0)
+            cout << "+  Player wins " << to_string(abs(res)) <<
+            " chip" << "s "[abs(res) == 1] << endl << endl;
+        else
+            cout << "-  Player loses " << to_string(abs(res)) <<
+            " chip" << "s "[abs(res) == 1] << endl << endl;
+    }
+
+    void handle_terminal_state(string h, Node* node) {
+        // get result of showdown
+        int res = (int) node->get_utility(this->cards);
+        // normalize res wrt p1
+        if (h.length() == 3)
+            res = -res;
+        // normalize res wrt player
+        if (p1 == "Bot")
+            res = -res;
+
+        // show res
+        display_hand_result(h, res);
+        player_stack += res;
+        bot_stack -= res;
+
+        // wait for player to hit enter
         cout << "(Enter) to continue" << endl;
         cin.ignore();
         char temp = 'x';
@@ -402,7 +424,7 @@ private:
             cout << "(c/b) ";
             cin >> c;
         }
-        cout << "Player plays " << ((c == "c") ? "check" : "bet") << endl;
+        cout << "-> Player plays " << ((c == "c") ? "check" : "bet") << endl << endl;
         return c;
     }
 
@@ -413,45 +435,31 @@ private:
         vector<double> strategy = node->get_average_strategy();
         // pick the move
         double r = ((double) rand()) / ((double) RAND_MAX);
-        cout << "Bot plays " << ((r <= strategy[0]) ? "check" : "bet") << endl << endl;
+        cout << "-> Bot plays " << ((r <= strategy[0]) ? "check" : "bet") << endl << endl;
         return (r <= strategy[0]) ? "c" : "b";
     }
 
     void play_hand() {
         this->display();
         string h;
+        string turn = p1;
         // while hand is running
         while (!TERMINAL_HISTORIES.count(h)) {
-            if (p1 == "player") {
+            if (turn == "player") {
                 // get player's move
                 h += get_player_action();
-
-                Node* node = this->solution[this->player_card_string + h];
-
-                // check if that move ended the game
-                if (node->is_terminal()) {
-                    // if it did, do this
-                    handle_terminal_state(node, true);
-                } else {
-                    // otherwise, it's the bot's turn
-                    h += get_bot_action(h);
-                    node = this->solution[this->bot_card_string + h];
-                    if (node->is_terminal())
-                        handle_terminal_state(node, false);
-                }
             } else {
                 h += get_bot_action(h);
-
-                Node* node = this->solution[this->bot_card_string + h];
-                if (node->is_terminal())
-                    handle_terminal_state(node, false);
-                else {
-                    h += get_player_action();
-                    node = this->solution[this->player_card_string + h];
-                    if (node->is_terminal())
-                        handle_terminal_state(node, false);
-                }
             }
+
+            Node* node = this->solution["1" + h];
+
+            // check if that move ended the game
+            if (node->is_terminal())
+                // if it did, do this
+                handle_terminal_state(h, node);
+
+            turn = (turn == "player") ? "bot" : "player";
         }
     }
 public:
@@ -467,10 +475,11 @@ public:
         bool is_game_over = false;
         while (!is_game_over) {
             ranges::shuffle(cards, rng);
-            this->player_card = cards[0];
-            this->player_card_string = to_string(cards[0]);
-            this->bot_card = cards[1];
-            this->bot_card_string = to_string(cards[1]);
+            bool oop = (this->p1 == "player");
+            this->player_card = cards[oop ? 0 : 1];
+            this->player_card_string = to_string(cards[oop ? 0 : 1]);
+            this->bot_card = cards[oop ? 1 : 0];
+            this->bot_card_string = to_string(cards[oop ? 1 : 0]);
 
             this->play_hand();
             if (player_stack <= 0 || bot_stack <= 0)
@@ -478,10 +487,33 @@ public:
         }
 
         cout << "Game over!" << endl;
+        cout << ((player_stack <= 0) ? "Bot" : "Player") << " won." << endl;
     }
 };
 
 int main() {
     Game game;
     game.play();
+
+    // vector<int> cards = {1, 2, 3};
+
+    // // wrt p1
+    // Node* u1 = new Node(" cc");
+    // cout << u1->get_utility(cards) << endl;
+
+    // // wrt p1
+    // Node* u2 = new Node(" bb");
+    // cout << u2->get_utility(cards) << endl;
+
+    // // wrt p1
+    // Node* u3 = new Node(" bc");
+    // cout << u3->get_utility(cards) << endl;
+
+    // // wrt p2
+    // Node* u4 = new Node(" cbb");
+    // cout << u4->get_utility(cards) << endl;
+
+    // // wrt p2
+    // Node* u5 = new Node(" cbc");
+    // cout << u5->get_utility(cards) << endl;
 }
