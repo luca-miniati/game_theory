@@ -533,26 +533,4 @@ class Game {
 int main() {
     Game game;
     game.play();
-
-    // vector<int> cards = {1, 2, 3};
-
-    // // wrt p1
-    // Node* u1 = new Node(" cc");
-    // cout << u1->get_utility(cards) << endl;
-
-    // // wrt p1
-    // Node* u2 = new Node(" bb");
-    // cout << u2->get_utility(cards) << endl;
-
-    // // wrt p1
-    // Node* u3 = new Node(" bc");
-    // cout << u3->get_utility(cards) << endl;
-
-    // // wrt p2
-    // Node* u4 = new Node(" cbb");
-    // cout << u4->get_utility(cards) << endl;
-
-    // // wrt p2
-    // Node* u5 = new Node(" cbc");
-    // cout << u5->get_utility(cards) << endl;
 }
