@@ -106,11 +106,6 @@ public:
         return (c1 > c2) ? 2 : -2;
     }
 
-    // Returns probability of the player to move to make action a
-    double get_action_p(int a) {
-        return this->strategy[a];
-    }
-
     // Update strategy using regret matching, using p as the probability
     // of being in this state
     vector<double> get_strategy(double p) {
